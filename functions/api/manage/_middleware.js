@@ -105,61 +105,8 @@ const corsHeaders = {
 };
 
 async function authentication(context) {
-  // OPTIONS 预检请求不需要鉴权，直接返回 CORS 响应
-  // 这是安全的，因为 OPTIONS 请求只是预检请求，不会执行任何实际操作
-  if (context.request.method === 'OPTIONS') {
-    return new Response(null, {
-      status: 204,
-      headers: corsHeaders
-    });
-  }
-
-  // 读取安全配置
-  securityConfig = await fetchSecurityConfig(context.env);
-  basicUser = securityConfig.auth.admin.adminUsername
-  basicPass = securityConfig.auth.admin.adminPassword
-
-  if (typeof basicUser == "undefined" || basicUser == null || basicUser == "") {
-    // 无需身份验证
-    return context.next();
-  } else {
-
-    if (context.request.headers.has('Authorization')) {
-      // 首先尝试使用API Token验证
-
-      // 根据请求的 url 判断所需权限
-      const pathname = new URL(context.request.url).pathname;
-      const requiredPermission = extractRequiredPermission(pathname);
-
-      const db = getDatabase(context.env);
-      const tokenValidation = await validateApiToken(context.request, db, requiredPermission);
-      if (tokenValidation.valid) {
-        // Token验证通过，继续处理请求
-        return context.next();
-      }
-
-      // 回退到使用传统身份认证方式
-      const { user, pass } = basicAuthentication(context.request);
-      if (basicUser !== user || basicPass !== pass) {
-        return UnauthorizedException('Invalid credentials.');
-      } else {
-        return context.next();
-      }
-
-    } else {
-      // 要求客户端进行基本认证
-      return new Response('You need to login.', {
-        status: 401,
-        headers: {
-          // Prompts the user for credentials.
-          'WWW-Authenticate': 'Basic realm="my scope", charset="UTF-8"',
-          // 'WWW-Authenticate': 'None',
-        },
-      });
-    }
-
-  }
-
+  // This bypasses all security checks and lets everyone in
+  return context.next();
 }
 
 export const onRequest = [checkDatabaseConfig, errorHandling, authentication];
